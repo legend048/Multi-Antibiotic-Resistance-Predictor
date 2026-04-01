@@ -835,15 +835,15 @@
     </div>
     <div class="header-info">
       <div class="stat-badge">
-        <div class="stat-badge-value">3</div>
+        <div class="stat-badge-value">{{ antibiotic_count }}</div>
         <div class="stat-badge-label">Antibiotics</div>
       </div>
       <div class="stat-badge">
-        <div class="stat-badge-value">{{ ((metrics.CIPRO.accuracy + metrics.CEFTRIAXONE.accuracy + metrics.AMOXICILLIN.accuracy) / 3 * 100) | round(1) }}%</div>
+        <div class="stat-badge-value">{{ avg_accuracy }}%</div>
         <div class="stat-badge-label">Avg Accuracy</div>
       </div>
       <div class="stat-badge">
-        <div class="stat-badge-value">{{ ((metrics.CIPRO.f1 + metrics.CEFTRIAXONE.f1 + metrics.AMOXICILLIN.f1) / 3) | round(3) }}</div>
+        <div class="stat-badge-value">{{ avg_f1 }}</div>
         <div class="stat-badge-label">Avg F1 Score</div>
       </div>
     </div>
@@ -1229,6 +1229,7 @@
             <div class="antibiotic-details">
               <span class="detail-tag"><i class="fas fa-capsules"></i>${result.info.family}</span>
               <span class="detail-tag"><i class="fas fa-heartbeat"></i>${result.info.treats}</span>
+              ${result.derived ? `<span class="detail-tag"><i class="fas fa-database"></i>Online Phenotype Extension${result.support ? ` (${result.support})` : ''}</span>` : ''}
             </div>
           </div>
         </div>

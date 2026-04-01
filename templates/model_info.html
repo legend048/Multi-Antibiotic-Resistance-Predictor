@@ -198,6 +198,24 @@
     margin-bottom: 0.7rem;
   }
 
+  .core-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .core-chip {
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1e3a8a;
+    border-radius: 999px;
+    padding: 0.32rem 0.62rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: var(--mono);
+  }
+
   table {
     width: 100%;
     border-collapse: collapse;
@@ -299,15 +317,15 @@
 
     <section class="stats">
       <div class="stat">
-        <div class="stat-label">Supported Antibiotics</div>
-        <div class="stat-value">{{ antibiotics|length }}</div>
+        <div class="stat-label">Total Supported Antibiotics</div>
+        <div class="stat-value">{{ supported_antibiotics|length }}</div>
       </div>
       <div class="stat">
-        <div class="stat-label">Average F1 Score</div>
+        <div class="stat-label">Core Model Avg F1</div>
         <div class="stat-value">{{ avg_f1 }}</div>
       </div>
       <div class="stat">
-        <div class="stat-label">Average Accuracy</div>
+        <div class="stat-label">Core Model Avg Accuracy</div>
         <div class="stat-value">{{ avg_accuracy }}%</div>
       </div>
     </section>
@@ -316,7 +334,14 @@
       <article class="card">
         <h2><i class="fas fa-bullseye" style="color: var(--primary);"></i> What It Does</h2>
         <ul>
-          <li>Predicts resistance class (S, I, R) for three antibiotics in one request.</li>
+          <li>Predicts resistance class (S, I, R) for core antibiotics directly from genomic features.</li>
+          <li>
+            Core trained antibiotics:
+            {% for ab in antibiotics %}
+              {{ antibiotic_info[ab].full }}{% if not loop.last %}, {% endif %}
+            {% endfor %}
+          </li>
+          <li>Extends to additional antibiotics using an online phenotype-extension model.</li>
           <li>Returns confidence and class probabilities for each antibiotic.</li>
           <li>Supports manual genomic input and AI-assisted extraction from medical reports.</li>
         </ul>
@@ -336,7 +361,7 @@
         <h2><i class="fas fa-graduation-cap" style="color: var(--warning);"></i> How We Trained It</h2>
         <p>
           The model was trained on a cleaned antimicrobial resistance dataset with paired genomic features and AST outcomes.
-          We used a multi-task setup so one training pipeline learns all three antibiotic targets together.
+          We used a multi-task setup so one training pipeline learns all {{ antibiotics|length }} core antibiotic targets together.
         </p>
         <div class="train-grid">
           <div class="train-item">
@@ -368,7 +393,12 @@
     </section>
 
     <section class="wide">
-      <h2><i class="fas fa-capsules" style="color: var(--danger);"></i> Supported Antibiotics</h2>
+      <h2><i class="fas fa-capsules" style="color: var(--danger);"></i> Core Trained Antibiotics ({{ antibiotics|length }})</h2>
+      <div class="core-chip-list">
+        {% for ab in antibiotics %}
+          <span class="core-chip">{{ antibiotic_info[ab].full }}</span>
+        {% endfor %}
+      </div>
       <table>
         <thead>
           <tr>
@@ -390,6 +420,19 @@
         </tbody>
       </table>
 
+      <div class="f1-box" style="margin-top: 0.8rem;">
+        <h3>Extended Antibiotics from Online Data</h3>
+        <p>
+          The system also supports additional antibiotics using phenotype correlations learned from an online public E. coli AMR matrix.
+          These are shown in predictions with an extension tag.
+        </p>
+        <p>
+          {% for ab in extension_antibiotics %}
+            <strong>{{ antibiotic_info[ab].full }}</strong>{% if not loop.last %}, {% endif %}
+          {% endfor %}
+        </p>
+      </div>
+
       <div class="f1-box">
         <h3>What Is F1 Score?</h3>
         <p>
@@ -398,7 +441,10 @@
         </p>
         <div class="formula">F1 = 2 * (Precision * Recall) / (Precision + Recall)</div>
         <p>
-          In this project, the displayed average is the mean of per-antibiotic weighted F1 scores for Ciprofloxacin, Ceftriaxone, and Amoxicillin.
+          In this project, the displayed average is the mean of per-antibiotic weighted F1 scores for:
+          {% for ab in antibiotics %}
+            {{ antibiotic_info[ab].full }}{% if not loop.last %}, {% endif %}
+          {% endfor %}.
         </p>
       </div>
     </section>

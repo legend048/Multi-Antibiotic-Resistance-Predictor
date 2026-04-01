@@ -11,7 +11,7 @@
 
 ## 🔬 What This Does
 
-This project is a **multi-task machine learning system** that predicts antibiotic resistance in *E. coli* genomes. Given 40 genomic features extracted from whole-genome sequencing data (gene presence/absence markers, mutation counts, and proportion scores), the model simultaneously predicts resistance outcomes for **three clinically important antibiotics**:
+This project is a **multi-task machine learning system** that predicts antibiotic resistance in *E. coli* genomes. Given 40 genomic features extracted from whole-genome sequencing data (gene presence/absence markers, mutation counts, and proportion scores), the core model predicts resistance outcomes for **three clinically important antibiotics**:
 
 | Antibiotic | Drug Family | Treats |
 |---|---|---|
@@ -24,6 +24,8 @@ Each prediction returns one of three standardised AST labels:
 - 🟢 **S** — Susceptible (antibiotic kills the bacteria)
 - 🟡 **I** — Intermediate (uncertain, dose/context dependent)
 - 🔴 **R** — Resistant (antibiotic fails, bacteria survives)
+
+The app also includes an **online phenotype extension model** (built from a public 7k-strain E. coli phenotype matrix) to infer additional antibiotics from core prediction patterns. Currently extended targets include Gentamicin, Ceftazidime, Piperacillin/Tazobactam, Meropenem, and Trimethoprim/Sulfamethoxazole.
 
 ---
 
@@ -158,7 +160,7 @@ AMR-Multi-Antibiotic-Resistance-Predictor/
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/` | Interactive web dashboard |
-| `POST` | `/predict` | Run resistance prediction |
+| `POST` | `/predict` | Run core genomic prediction + extended online phenotype inference |
 | `POST` | `/extract_features` | Use AI Studio + uploaded medical data to infer F1-F40 |
 | `GET` | `/metrics` | Model performance stats |
 | `GET` | `/random_sample` | Load a sample genome for demo |

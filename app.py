@@ -6,6 +6,7 @@ from flask import Flask, render_template, request, jsonify
 import joblib
 import json
 import numpy as np
+import pandas as pd
 import os
 import io
 import re
@@ -43,11 +44,33 @@ encoders    = joblib.load(f"{MODEL_DIR}/encoders.pkl")
 FEATURE_COLS = json.load(open(f"{MODEL_DIR}/feature_cols.json"))
 METRICS     = json.load(open(f"{MODEL_DIR}/metrics.json"))
 FI          = json.load(open(f"{MODEL_DIR}/feature_importance.json"))
-ANTIBIOTICS = ["CIPRO", "CEFTRIAXONE", "AMOXICILLIN"]
+CORE_ANTIBIOTICS = ["CIPRO", "CEFTRIAXONE", "AMOXICILLIN"]
+
+ONLINE_PHENO_URL = (
+    "https://raw.githubusercontent.com/Arcadia-Science/"
+    "2024-Ecoli-amr-genotype-phenotype_7000strains/main/"
+    "dataset_analysis/results/phenotype_matrix_08302024.csv"
+)
+ONLINE_PHENO_PATH = "data/external/phenotype_matrix_08302024.csv"
+
+CORE_TO_ONLINE_COLUMN = {
+    "CIPRO": "ciprofloxacin",
+    "CEFTRIAXONE": "ceftriaxone",
+    "AMOXICILLIN": "amoxicillin"
+}
+
+EXTRA_TO_ONLINE_COLUMN = {
+    "GENTAMICIN": "gentamicin",
+    "CEFTAZIDIME": "ceftazidime",
+    "PIPERACILLIN_TAZOBACTAM": "piperacillin/tazobactam",
+    "MEROPENEM": "meropenem",
+    "TRIMETHOPRIM_SULFAMETHOXAZOLE": "trimethoprim/sulfamethoxazole"
+}
 
 LABEL_MAP   = {0: "S", 1: "I", 2: "R"}
 LABEL_FULL  = {"S": "Susceptible", "I": "Intermediate", "R": "Resistant"}
 LABEL_COLOR = {"S": "#00d4aa", "I": "#f5a623", "R": "#ff4d6d"}
+AST_LABELS  = ("S", "I", "R")
 
 ANTIBIOTIC_INFO = {
     "CIPRO": {
@@ -67,6 +90,36 @@ ANTIBIOTIC_INFO = {
         "family": "Penicillin",
         "treats": "Ear infections, strep throat, chest infections",
         "mechanism": "Disrupts cell wall synthesis"
+    },
+    "GENTAMICIN": {
+        "full": "Gentamicin",
+        "family": "Aminoglycoside",
+        "treats": "Severe Gram-negative infections and sepsis",
+        "mechanism": "Inhibits bacterial protein synthesis"
+    },
+    "CEFTAZIDIME": {
+        "full": "Ceftazidime",
+        "family": "3rd-gen Cephalosporin",
+        "treats": "Serious hospital-acquired Gram-negative infections",
+        "mechanism": "Inhibits bacterial cell wall synthesis"
+    },
+    "PIPERACILLIN_TAZOBACTAM": {
+        "full": "Piperacillin/Tazobactam",
+        "family": "Ureidopenicillin + beta-lactamase inhibitor",
+        "treats": "Complicated intra-abdominal and polymicrobial infections",
+        "mechanism": "Cell wall inhibition with beta-lactamase protection"
+    },
+    "MEROPENEM": {
+        "full": "Meropenem",
+        "family": "Carbapenem",
+        "treats": "Severe multidrug-resistant bacterial infections",
+        "mechanism": "Broad-spectrum cell wall synthesis inhibition"
+    },
+    "TRIMETHOPRIM_SULFAMETHOXAZOLE": {
+        "full": "Trimethoprim/Sulfamethoxazole",
+        "family": "Folate pathway inhibitor combination",
+        "treats": "UTIs and opportunistic bacterial infections",
+        "mechanism": "Blocks bacterial folate synthesis at two steps"
     }
 }
 
@@ -127,6 +180,180 @@ def _normalize_feature_payload(raw_features):
         normalized[feature] = round(value, 4)
 
     return normalized
+
+
+def _normalize_ast_label(raw_value):
+    if raw_value is None or pd.isna(raw_value):
+        return None
+
+    value = str(raw_value).strip().lower()
+    if value in {"s", "susceptible"}:
+        return "S"
+    if value in {"i", "intermediate"}:
+        return "I"
+    if value in {"r", "resistant", "non-susceptible", "nonsusceptible"}:
+        return "R"
+
+    if "intermediate" in value:
+        return "I"
+    if "susceptible" in value and "non-susceptible" not in value and "nonsusceptible" not in value:
+        return "S"
+    if "resistant" in value or "non-susceptible" in value or "nonsusceptible" in value:
+        return "R"
+    return None
+
+
+def _ensure_online_phenotype_file():
+    if os.path.exists(ONLINE_PHENO_PATH):
+        return ONLINE_PHENO_PATH
+
+    os.makedirs(os.path.dirname(ONLINE_PHENO_PATH), exist_ok=True)
+    try:
+        req = urllib.request.Request(ONLINE_PHENO_URL, method="GET")
+        with urllib.request.urlopen(req, timeout=45) as response:
+            data = response.read()
+        if not data:
+            return None
+
+        with open(ONLINE_PHENO_PATH, "wb") as out_file:
+            out_file.write(data)
+        return ONLINE_PHENO_PATH
+    except Exception:
+        return None
+
+
+def _safe_distribution(values):
+    total = sum(values.values())
+    if total <= 0:
+        return {label: 0.0 for label in AST_LABELS}
+    return {label: round(values.get(label, 0) / total, 6) for label in AST_LABELS}
+
+
+def _build_online_extension_model():
+    source_path = _ensure_online_phenotype_file()
+    if not source_path or not os.path.exists(source_path):
+        return {}
+
+    try:
+        df = pd.read_csv(source_path)
+    except Exception:
+        return {}
+
+    column_lookup = {str(col).strip().lower(): col for col in df.columns}
+
+    core_columns = {}
+    for core_ab, online_col in CORE_TO_ONLINE_COLUMN.items():
+        actual_col = column_lookup.get(online_col.lower())
+        if actual_col:
+            core_columns[core_ab] = actual_col
+
+    extension_model = {}
+    for target_ab, target_online_col in EXTRA_TO_ONLINE_COLUMN.items():
+        target_col = column_lookup.get(target_online_col.lower())
+        if not target_col:
+            continue
+
+        target_series = df[target_col].map(_normalize_ast_label)
+        overall_counts = target_series.value_counts().to_dict()
+        overall_dist = _safe_distribution(overall_counts)
+
+        per_source = {}
+        total_support = 0
+        for source_ab, source_col in core_columns.items():
+            subset = df[[source_col, target_col]].dropna()
+            if subset.empty:
+                continue
+
+            subset = subset.copy()
+            subset[source_col] = subset[source_col].map(_normalize_ast_label)
+            subset[target_col] = subset[target_col].map(_normalize_ast_label)
+            subset = subset.dropna()
+            if subset.empty:
+                continue
+
+            source_distributions = {}
+            for source_label in AST_LABELS:
+                source_slice = subset[subset[source_col] == source_label]
+                support = int(len(source_slice))
+                if support < 30:
+                    continue
+
+                target_counts = source_slice[target_col].value_counts().to_dict()
+                dist = _safe_distribution(target_counts)
+                dist["support"] = support
+                source_distributions[source_label] = dist
+                total_support += support
+
+            if source_distributions:
+                per_source[source_ab] = source_distributions
+
+        if per_source or any(overall_dist.values()):
+            extension_model[target_ab] = {
+                "sources": per_source,
+                "overall": overall_dist,
+                "total_support": total_support
+            }
+
+    return extension_model
+
+
+def _infer_extended_predictions(core_predictions):
+    inferred = {}
+    if not ONLINE_EXTENSION_MODEL:
+        return inferred
+
+    for target_ab, target_model in ONLINE_EXTENSION_MODEL.items():
+        combined = {label: 0.0 for label in AST_LABELS}
+        total_weight = 0.0
+        used_support = 0
+
+        for source_ab, source_stats in target_model.get("sources", {}).items():
+            source_pred = core_predictions.get(source_ab)
+            if not source_pred:
+                continue
+
+            source_label = source_pred["label"]
+            label_dist = source_stats.get(source_label)
+            if not label_dist:
+                continue
+
+            source_weight = source_pred["probabilities"].get(source_label, 0.0)
+            source_weight = max(source_weight, 0.05)
+
+            for cls_label in AST_LABELS:
+                combined[cls_label] += source_weight * float(label_dist.get(cls_label, 0.0))
+
+            total_weight += source_weight
+            used_support += int(label_dist.get("support", 0))
+
+        if total_weight > 0:
+            for cls_label in AST_LABELS:
+                combined[cls_label] = combined[cls_label] / total_weight
+        else:
+            combined = dict(target_model.get("overall", {label: 0.0 for label in AST_LABELS}))
+            used_support = int(target_model.get("total_support", 0))
+
+        pred_label = max(combined, key=combined.get)
+        base_conf = float(combined[pred_label]) * 100
+        support_factor = min(1.0, used_support / 800.0) if used_support > 0 else 0.5
+        confidence = round(base_conf * max(support_factor, 0.5), 1)
+
+        inferred[target_ab] = {
+            "label": pred_label,
+            "full": LABEL_FULL[pred_label],
+            "color": LABEL_COLOR[pred_label],
+            "confidence": confidence,
+            "probabilities": {label: round(float(combined.get(label, 0.0)), 3) for label in AST_LABELS},
+            "info": ANTIBIOTIC_INFO[target_ab],
+            "derived": True,
+            "support": used_support
+        }
+
+    return inferred
+
+
+ONLINE_EXTENSION_MODEL = _build_online_extension_model()
+SUPPORTED_ANTIBIOTICS = CORE_ANTIBIOTICS + [ab for ab in ONLINE_EXTENSION_MODEL.keys() if ab not in CORE_ANTIBIOTICS]
 
 
 def _extract_explicit_feature_values(medical_text):
@@ -372,10 +599,17 @@ def _call_generate_content(api_key, model_name, prompt_text):
 # ── Routes ────────────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
+    avg_accuracy = round(sum(METRICS[ab]["accuracy"] for ab in CORE_ANTIBIOTICS) / len(CORE_ANTIBIOTICS) * 100, 1)
+    avg_f1 = round(sum(METRICS[ab]["f1"] for ab in CORE_ANTIBIOTICS) / len(CORE_ANTIBIOTICS), 3)
+
     return render_template("index.html",
-                           antibiotics=ANTIBIOTICS,
+                           antibiotics=SUPPORTED_ANTIBIOTICS,
+                           core_antibiotics=CORE_ANTIBIOTICS,
+                           antibiotic_count=len(SUPPORTED_ANTIBIOTICS),
                            antibiotic_info=ANTIBIOTIC_INFO,
                            metrics=METRICS,
+                           avg_accuracy=avg_accuracy,
+                           avg_f1=avg_f1,
                            feature_importance=FI["per_antibiotic"],
                            feature_cols=FEATURE_COLS)
 
@@ -387,8 +621,8 @@ def genomic_features_page():
 
 @app.route("/model_info")
 def model_info_page():
-    avg_f1 = round(sum(METRICS[ab]["f1"] for ab in ANTIBIOTICS) / len(ANTIBIOTICS), 3)
-    avg_accuracy = round(sum(METRICS[ab]["accuracy"] for ab in ANTIBIOTICS) / len(ANTIBIOTICS) * 100, 1)
+    avg_f1 = round(sum(METRICS[ab]["f1"] for ab in CORE_ANTIBIOTICS) / len(CORE_ANTIBIOTICS), 3)
+    avg_accuracy = round(sum(METRICS[ab]["accuracy"] for ab in CORE_ANTIBIOTICS) / len(CORE_ANTIBIOTICS) * 100, 1)
 
     training_summary = {
         "algorithm": "MultiOutputClassifier(RandomForestClassifier)",
@@ -397,12 +631,14 @@ def model_info_page():
         "dataset_size": 3000,
         "feature_count": len(FEATURE_COLS),
         "data_split": "80/20 train-test split",
-        "source": "PATRIC / BV-BRC"
+        "source": "PATRIC / BV-BRC + online phenotype extension"
     }
 
     return render_template(
         "model_info.html",
-        antibiotics=ANTIBIOTICS,
+        antibiotics=CORE_ANTIBIOTICS,
+        supported_antibiotics=SUPPORTED_ANTIBIOTICS,
+        extension_antibiotics=[ab for ab in SUPPORTED_ANTIBIOTICS if ab not in CORE_ANTIBIOTICS],
         antibiotic_info=ANTIBIOTIC_INFO,
         metrics=METRICS,
         avg_f1=avg_f1,
@@ -419,7 +655,7 @@ def predict():
     X = np.array([[float(features.get(f, 0)) for f in FEATURE_COLS]])
 
     predictions = {}
-    for i, ab in enumerate(ANTIBIOTICS):
+    for i, ab in enumerate(CORE_ANTIBIOTICS):
         estimator = model.estimators_[i]
         pred_idx  = estimator.predict(X)[0]
         proba     = estimator.predict_proba(X)[0]
@@ -440,8 +676,11 @@ def predict():
             "color":      LABEL_COLOR[label],
             "confidence": round(max(proba) * 100, 1),
             "probabilities": prob_dict,
-            "info":       ANTIBIOTIC_INFO[ab]
+            "info":       ANTIBIOTIC_INFO[ab],
+            "derived":    False
         }
+
+    predictions.update(_infer_extended_predictions(predictions))
 
     # Top contributing features
     overall_fi = FI["overall"]
@@ -581,16 +820,21 @@ Medical data:
 
 @app.route("/metrics")
 def get_metrics():
-    return jsonify({"metrics": METRICS, "feature_importance": FI})
+    return jsonify({
+        "metrics": METRICS,
+        "feature_importance": FI,
+        "supported_antibiotics": SUPPORTED_ANTIBIOTICS,
+        "core_antibiotics": CORE_ANTIBIOTICS,
+        "extension_antibiotics": [ab for ab in SUPPORTED_ANTIBIOTICS if ab not in CORE_ANTIBIOTICS]
+    })
 
 @app.route("/random_sample")
 def random_sample():
     """Return a random realistic genome sample."""
-    import pandas as pd
     df = pd.read_csv("data/amr_dataset.csv")
     row = df.sample(1).iloc[0]
     features = {f: float(row[f]) for f in FEATURE_COLS}
-    actual = {ab: row[ab] for ab in ANTIBIOTICS}
+    actual = {ab: row[ab] for ab in CORE_ANTIBIOTICS}
     return jsonify({"features": features, "actual": actual})
 
 if __name__ == "__main__":
