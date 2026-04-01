@@ -1,0 +1,30 @@
+Medical Microbiology Report
+Report ID: AMR-USER-DEMO-005
+Date: 2026-04-02
+Facility: City Care Hospital
+
+Patient Summary:
+- Adult patient with recurrent urinary tract infection
+- Recent treatment history includes fluoroquinolone exposure
+- Persistent dysuria, fever, and flank discomfort
+
+Specimen Information:
+- Specimen type: Midstream urine
+- Organism identified: Escherichia coli
+- Colony burden: High
+
+Genomics and Resistance Narrative:
+- gyrA S83L mutation detected in quinolone resistance region
+- gyrA D87G mutation detected
+- bla_TEM gene present
+- bla_CTX-M-15 detected, consistent with ESBL pattern
+- bla_SHV marker detected
+- Multi-drug resistance plasmid marker present
+- Efflux pump activity appears elevated in expression summary
+
+Clinical Interpretation:
+Pattern suggests elevated antimicrobial resistance risk, especially for ciprofloxacin and beta-lactam group agents.
+Recommend confirmatory AST panel and targeted antimicrobial stewardship review.
+
+Physician Note:
+Use genomic and AST results together with patient condition before final treatment decision.

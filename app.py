@@ -9,6 +9,7 @@ import numpy as np
 import os
 import io
 import re
+import socket
 import urllib.error
 import urllib.request
 
@@ -128,6 +129,124 @@ def _normalize_feature_payload(raw_features):
     return normalized
 
 
+def _extract_explicit_feature_values(medical_text):
+    """Parse explicit F1-F40 numeric assignments if provided in the report."""
+    feature_pattern = re.compile(
+        r"\b(F(?:[1-9]|[12][0-9]|3[0-9]|40))\s*[:=]\s*(-?\d+(?:\.\d+)?)\b",
+        re.IGNORECASE
+    )
+    extracted = {}
+    for feature, raw_value in feature_pattern.findall(medical_text):
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError):
+            continue
+
+        extracted[feature.upper()] = round(max(0.0, min(1.0, value)), 4)
+
+    return extracted
+
+
+def _detect_entity_signal(lower_text, entity_patterns):
+    """Detect positive/negative mention around genomic marker phrases."""
+    positive_terms = ["detected", "present", "positive", "identified", "found", "elevated", "high"]
+    negative_terms = ["not detected", "absent", "negative", "undetected", "not found", "no evidence"]
+
+    for pattern in entity_patterns:
+        for match in re.finditer(pattern, lower_text):
+            start = max(0, match.start() - 90)
+            end = min(len(lower_text), match.end() + 90)
+            window = lower_text[start:end]
+
+            if any(term in window for term in negative_terms):
+                return 0.0
+            if any(term in window for term in positive_terms):
+                return 1.0
+
+            # Mentioned marker but uncertain context.
+            return 0.7
+
+    return None
+
+
+def _extract_seed_features_from_medical_text(medical_text):
+    """Build seed features from direct report clues so narrative reports are usable."""
+    explicit_features = _extract_explicit_feature_values(medical_text)
+    seed_features = dict(explicit_features)
+    lower_text = medical_text.lower()
+
+    marker_map = {
+        "F1": [r"gyra\s*s83l", r"\bs83l\b"],
+        "F2": [r"gyra\s*d87g", r"\bd87g\b"],
+        "F3": [r"bla[_-]?tem", r"\btem\b"],
+        "F7": [r"bla[_-]?shv", r"\bshv\b"],
+        "F11": [r"bla[_-]?ctx[- ]?m[- ]?15", r"ctx[- ]?m[- ]?15", r"\besbl\b"]
+    }
+
+    for feature, patterns in marker_map.items():
+        if feature in seed_features:
+            continue
+
+        signal = _detect_entity_signal(lower_text, patterns)
+        if signal is not None:
+            seed_features[feature] = signal
+
+    if "F4" not in seed_features:
+        if re.search(r"mdr\s+plasmid|multi[- ]drug resistance plasmid|multidrug plasmid|plasmid marker", lower_text):
+            seed_features["F4"] = 0.9
+        elif "plasmid" in lower_text and ("resistance" in lower_text or "mdr" in lower_text):
+            seed_features["F4"] = 0.65
+
+    if "F16" not in seed_features and "efflux pump" in lower_text:
+        if any(term in lower_text for term in ["elevated", "high", "overexpressed", "upregulated"]):
+            seed_features["F16"] = 0.8
+        elif any(term in lower_text for term in ["moderate", "increased"]):
+            seed_features["F16"] = 0.6
+        elif any(term in lower_text for term in ["low", "minimal"]):
+            seed_features["F16"] = 0.25
+        else:
+            seed_features["F16"] = 0.5
+
+    high_risk_phrases = [
+        "multi-drug resistance",
+        "multidrug resistance",
+        "likely resistant",
+        "resistant phenotype",
+        "high amr burden",
+        "extensively drug resistant",
+        "esbl"
+    ]
+    low_risk_phrases = [
+        "low risk",
+        "susceptible",
+        "no major resistance",
+        "no resistance markers",
+        "limited amr signal"
+    ]
+
+    risk_score = 0
+    for phrase in high_risk_phrases:
+        if phrase in lower_text:
+            risk_score += 1
+    for phrase in low_risk_phrases:
+        if phrase in lower_text:
+            risk_score -= 1
+
+    if any(feat in seed_features and seed_features[feat] > 0.5 for feat in ["F1", "F2", "F3", "F7", "F11"]):
+        risk_score += 1
+
+    baseline_prop = max(0.0, min(1.0, 0.35 + 0.08 * risk_score))
+    for idx in range(31, 41):
+        feat = f"F{idx}"
+        if feat in seed_features:
+            continue
+
+        offset = ((idx - 31) % 4 - 1.5) * 0.02
+        seed_features[feat] = round(max(0.0, min(1.0, baseline_prop + offset)), 4)
+
+    return seed_features, explicit_features
+
+
 def _strip_model_prefix(model_name):
     if model_name.startswith("models/"):
         return model_name.split("models/", 1)[1]
@@ -194,6 +313,62 @@ def _resolve_generate_model_id(api_key, requested_model):
 
     return available_short[0]
 
+
+def _build_generation_payload(prompt_text, enforce_json_mode=True):
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": prompt_text}]}],
+        "generationConfig": {
+            "temperature": 0
+        }
+    }
+    if enforce_json_mode:
+        payload["generationConfig"]["responseMimeType"] = "application/json"
+    return payload
+
+
+def _call_generate_content(api_key, model_name, prompt_text):
+    """Call generateContent and gracefully fallback if strict JSON mode is unsupported."""
+    request_timeout = 90
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+    payload = _build_generation_payload(prompt_text, enforce_json_mode=True)
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=request_timeout) as response:
+            return json.loads(response.read().decode("utf-8")), True
+    except urllib.error.HTTPError as err:
+        error_body = err.read().decode("utf-8", errors="ignore")
+        lowered = error_body.lower()
+        json_mode_unsupported = (
+            err.code == 400
+            and (
+                "json mode is not enabled" in lowered
+                or (
+                    "responsemimetype" in lowered
+                    and ("not enabled" in lowered or "unsupported" in lowered)
+                )
+            )
+        )
+
+        if not json_mode_unsupported:
+            raise urllib.error.HTTPError(err.url, err.code, err.reason, err.headers, io.BytesIO(error_body.encode("utf-8")))
+
+        fallback_payload = _build_generation_payload(prompt_text, enforce_json_mode=False)
+        fallback_req = urllib.request.Request(
+            url,
+            data=json.dumps(fallback_payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+
+        with urllib.request.urlopen(fallback_req, timeout=request_timeout) as response:
+            return json.loads(response.read().decode("utf-8")), False
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
@@ -203,6 +378,11 @@ def index():
                            metrics=METRICS,
                            feature_importance=FI["per_antibiotic"],
                            feature_cols=FEATURE_COLS)
+
+
+@app.route("/genomic_features")
+def genomic_features_page():
+    return render_template("genomic_features.html", feature_cols=FEATURE_COLS)
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -271,62 +451,88 @@ def extract_features():
     try:
         model_name = _resolve_generate_model_id(api_key, selected_model)
         medical_text = _extract_text_from_uploaded_file(uploaded_file)
+        seed_features, explicit_features = _extract_seed_features_from_medical_text(medical_text)
+        llm_warning = None
+
         prompt = f"""
 You are extracting AMR genomic features for a resistance model.
 
 Task:
 1) Read the medical/genomics text below.
-2) Infer numeric values for each feature key.
+2) Use provided seed feature values when they reflect explicit clues from the report.
+3) Infer missing feature values from the report context.
 3) Return ONLY a JSON object with exactly these keys: {", ".join(FEATURE_COLS)}
 
 Rules:
 - Values must be numeric and in range [0, 1].
 - If there is not enough evidence, use 0.
+- Keep explicit report-derived seed values unchanged unless the report clearly contradicts them.
 - Do not include explanations, markdown, or extra keys.
+
+Seed features extracted from the report:
+{json.dumps(seed_features, sort_keys=True)}
 
 Medical data:
 {medical_text}
 """
 
-        payload = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": 0,
-                "responseMimeType": "application/json"
-            }
-        }
+        try:
+            api_data, used_strict_json_mode = _call_generate_content(api_key, model_name, prompt)
+        except (urllib.error.URLError, TimeoutError, socket.timeout):
+            # Continue with seed-only extraction if remote LLM call is temporarily unavailable.
+            api_data = None
+            used_strict_json_mode = False
+            llm_warning = "LLM request timed out or was unreachable. Using report-derived seed features only."
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
+        if api_data:
+            candidates = api_data.get("candidates", [])
+            if not candidates:
+                raise ValueError("AI Studio returned no candidate response.")
 
-        with urllib.request.urlopen(req, timeout=45) as response:
-            api_data = json.loads(response.read().decode("utf-8"))
+            parts = candidates[0].get("content", {}).get("parts", [])
+            llm_text = "\n".join(part.get("text", "") for part in parts if "text" in part).strip()
+            if not llm_text:
+                raise ValueError("AI Studio returned an empty response.")
+        else:
+            llm_text = ""
 
-        candidates = api_data.get("candidates", [])
-        if not candidates:
-            raise ValueError("AI Studio returned no candidate response.")
+        parser_fallback = False
+        try:
+            extracted = _extract_json_from_llm_response(llm_text) if llm_text else {}
+            if not isinstance(extracted, dict):
+                raise ValueError("AI Studio response format is invalid. Expected a JSON object.")
+        except (ValueError, json.JSONDecodeError):
+            extracted = {}
+            parser_fallback = True
 
-        parts = candidates[0].get("content", {}).get("parts", [])
-        llm_text = "\n".join(part.get("text", "") for part in parts if "text" in part).strip()
-        if not llm_text:
-            raise ValueError("AI Studio returned an empty response.")
+        # Merge strategy:
+        # 1) Explicit F-values in report
+        # 2) LLM inferred values
+        # 3) Heuristic seed values from narrative report clues
+        merged_features = {}
+        for feature in FEATURE_COLS:
+            if feature in explicit_features:
+                merged_features[feature] = explicit_features[feature]
+                continue
 
-        extracted = _extract_json_from_llm_response(llm_text)
-        if not isinstance(extracted, dict):
-            raise ValueError("AI Studio response format is invalid. Expected a JSON object.")
+            if feature in extracted:
+                merged_features[feature] = extracted[feature]
+                continue
 
-        normalized_features = _normalize_feature_payload(extracted)
+            merged_features[feature] = seed_features.get(feature, 0)
+
+        normalized_features = _normalize_feature_payload(merged_features)
         non_zero_count = sum(1 for val in normalized_features.values() if val > 0)
 
         return jsonify({
             "features": normalized_features,
             "model": f"models/{model_name}",
-            "non_zero_features": non_zero_count
+            "non_zero_features": non_zero_count,
+            "json_mode": "strict" if used_strict_json_mode else "prompt_only",
+            "seed_features_detected": len(seed_features),
+            "explicit_features_detected": len(explicit_features),
+            "parser_fallback": parser_fallback,
+            "llm_warning": llm_warning
         })
 
     except urllib.error.HTTPError as err:

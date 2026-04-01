@@ -323,6 +323,21 @@
     color: #0f766e;
   }
 
+  .ai-assist-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #155e75;
+    text-decoration: none;
+  }
+
+  .ai-assist-link:hover {
+    text-decoration: underline;
+  }
+
   .ai-assist-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -872,6 +887,10 @@
               <div>
                 <div class="ai-assist-title">AI-Assisted Genomic Feature Extraction</div>
                 <div class="ai-assist-subtitle">Upload medical/genomics notes and auto-fill F1-F40.</div>
+                <a class="ai-assist-link" href="/genomic_features">
+                  <i class="fas fa-book-medical"></i>
+                  What are Genomic Features?
+                </a>
               </div>
             </div>
 
@@ -1058,7 +1077,7 @@
 
     trigger.disabled = true;
     trigger.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting Features...';
-    setAiStatus('Calling AI Studio to infer genomic features from uploaded medical data...', 'info');
+    setAiStatus('Generating genomic features from uploaded medical data...', 'info');
 
     try {
       const response = await fetch('/extract_features', {
@@ -1073,8 +1092,20 @@
       }
 
       applyExtractedFeatures(data.features || {});
+      const modeText = data.json_mode === 'prompt_only' ? 'prompt JSON fallback' : 'strict JSON mode';
+      const seedText = Number.isFinite(data.seed_features_detected)
+        ? ` Seeded from report clues: ${data.seed_features_detected}.`
+        : '';
+      const explicitText = Number.isFinite(data.explicit_features_detected)
+        ? ` Explicit F-values found: ${data.explicit_features_detected}.`
+        : '';
+      const parserText = data.parser_fallback
+        ? ' LLM JSON parse fallback was used.'
+        : '';
+      const warningText = data.llm_warning ? ` ${data.llm_warning}` : '';
+
       setAiStatus(
-        `Extraction complete with ${data.model}. Non-zero features detected: ${data.non_zero_features}.`,
+        `Extraction complete with ${data.model} (${modeText}). Non-zero features detected: ${data.non_zero_features}.${seedText}${explicitText}${parserText}${warningText}`,
         'success'
       );
     } catch (error) {

@@ -1,0 +1,21 @@
+Infectious Disease Consultation Report
+Case ID: AMR-DEMO-004
+Specimen Type: Urine
+Organism: Escherichia coli
+
+Clinical Context:
+Patient with recurrent urinary tract infection and prior repeated ciprofloxacin exposure.
+Persistent fever and flank pain despite first-line oral therapy.
+
+Molecular/Genomics Summary:
+- gyrA S83L mutation detected
+- gyrA D87G mutation detected
+- bla_TEM gene present
+- bla_CTX-M-15 (ESBL-associated) detected
+- bla_SHV marker detected
+- multidrug resistance plasmid marker present
+- efflux pump signal elevated
+
+Microbiology Comment:
+Overall profile indicates high AMR burden with likely resistance to multiple commonly used antibiotics.
+Recommend confirmatory AST and stewardship-guided therapy.

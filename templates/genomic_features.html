@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What Are Genomic Features? | AMR CDS</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #0f172a;
+    --muted: #475569;
+    --line: #e2e8f0;
+    --primary: #0ea5e9;
+    --primary-dark: #0369a1;
+    --success: #16a34a;
+    --warning: #d97706;
+    --mono: 'Roboto Mono', monospace;
+    --main: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--main);
+    background: radial-gradient(circle at 15% 10%, #e0f2fe 0%, #f8fafc 45%), var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1rem 3rem;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+  }
+
+  .brand i {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #0284c7, #38bdf8);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .back-link {
+    text-decoration: none;
+    color: #0c4a6e;
+    font-weight: 600;
+    font-size: 0.92rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    background: #f0f9ff;
+  }
+
+  .hero {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .hero h1 {
+    font-size: 1.55rem;
+    margin-bottom: 0.55rem;
+  }
+
+  .hero p {
+    color: var(--muted);
+    line-height: 1.65;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1rem;
+  }
+
+  .card h2 {
+    font-size: 1rem;
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .card p {
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.62;
+  }
+
+  .chip-list {
+    margin-top: 0.85rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .chip {
+    font-family: var(--mono);
+    font-size: 0.73rem;
+    border-radius: 999px;
+    padding: 0.3rem 0.55rem;
+    border: 1px solid var(--line);
+    background: #f8fafc;
+  }
+
+  .chip.binary { border-color: #86efac; background: #f0fdf4; color: #166534; }
+  .chip.count { border-color: #fcd34d; background: #fffbeb; color: #92400e; }
+  .chip.prop { border-color: #7dd3fc; background: #f0f9ff; color: #0c4a6e; }
+
+  .full {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+
+  .full h3 {
+    margin-bottom: 0.65rem;
+  }
+
+  .full p {
+    color: var(--muted);
+    line-height: 1.66;
+    margin-bottom: 0.55rem;
+  }
+
+  .all-features {
+    margin-top: 0.8rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 0.45rem;
+  }
+
+  .all-feature {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    padding: 0.35rem 0.25rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <i class="fas fa-dna"></i>
+        <span>AMR Genomic Feature Guide</span>
+      </div>
+      <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Back to Predictor</a>
+    </div>
+
+    <section class="hero">
+      <h1>What Are Genomic Features?</h1>
+      <p>
+        Genomic features are numeric signals extracted from bacterial genome data. In this project, the model uses 40 features (F1-F40)
+        to represent mutation markers, resistance gene signatures, and summary proportions linked to antibiotic response.
+      </p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2><i class="fas fa-toggle-on" style="color: var(--success);"></i> F1-F15 Binary Signals</h2>
+        <p>
+          These are usually presence or absence indicators. Example: a known mutation or resistance gene is detected (1) or not detected (0).
+        </p>
+        <div class="chip-list">
+          {% for feat in feature_cols[0:15] %}
+            <span class="chip binary">{{ feat }}</span>
+          {% endfor %}
+        </div>
+      </article>
+
+      <article class="card">
+        <h2><i class="fas fa-bars" style="color: var(--warning);"></i> F16-F30 Count-like Burden</h2>
+        <p>
+          These represent mutation burden or element counts normalized to the model range. Higher values generally suggest larger AMR pressure.
+        </p>
+        <div class="chip-list">
+          {% for feat in feature_cols[15:30] %}
+            <span class="chip count">{{ feat }}</span>
+          {% endfor %}
+        </div>
+      </article>
+
+      <article class="card">
+        <h2><i class="fas fa-chart-area" style="color: var(--primary-dark);"></i> F31-F40 Proportions</h2>
+        <p>
+          These are proportional indicators (0 to 1), such as fractions of genome regions with resistance-associated patterns.
+        </p>
+        <div class="chip-list">
+          {% for feat in feature_cols[30:40] %}
+            <span class="chip prop">{{ feat }}</span>
+          {% endfor %}
+        </div>
+      </article>
+    </section>
+
+    <section class="full">
+      <h3>How the AI Upload Fits In</h3>
+      <p>
+        When you upload a medical or genomics note, the LLM converts unstructured text into these F1-F40 values. The predictor then uses
+        the normalized values to estimate susceptibility for Ciprofloxacin, Ceftriaxone, and Amoxicillin.
+      </p>
+      <p>
+        Important: this is a decision-support workflow for research and demo use. Real clinical decisions must still be confirmed by
+        certified AST laboratory testing.
+      </p>
+    </section>
+
+    <section class="full">
+      <h3>All Feature Keys Used by the Model</h3>
+      <div class="all-features">
+        {% for feat in feature_cols %}
+          <div class="all-feature">{{ feat }}</div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+</body>
+</html>

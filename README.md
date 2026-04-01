@@ -121,6 +121,8 @@ ai_studio_key=YOUR_AI_STUDIO_KEY
 
 The key in `.env` stays server-side and is not entered in the web UI.
 
+You can upload plain narrative reports (without explicit `F1`-`F40` values). The backend now extracts marker clues from report text and combines them with LLM inference to autofill genomic features.
+
 ---
 
 ## 🗂️ Project Structure
