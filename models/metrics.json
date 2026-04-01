@@ -1,0 +1,38 @@
+{
+  "CIPRO": {
+    "accuracy": 0.7833,
+    "mcc": 0.5525,
+    "f1": 0.7166,
+    "auc": 0.9344,
+    "precision_S": 0.765,
+    "recall_S": 0.992,
+    "precision_I": 0.0,
+    "recall_I": 0.0,
+    "precision_R": 0.883,
+    "recall_R": 0.692
+  },
+  "CEFTRIAXONE": {
+    "accuracy": 0.835,
+    "mcc": 0.6321,
+    "f1": 0.783,
+    "auc": 0.9348,
+    "precision_S": 0.829,
+    "recall_S": 0.993,
+    "precision_I": 0.0,
+    "recall_I": 0.0,
+    "precision_R": 0.877,
+    "recall_R": 0.782
+  },
+  "AMOXICILLIN": {
+    "accuracy": 0.7983,
+    "mcc": 0.5718,
+    "f1": 0.7321,
+    "auc": 0.934,
+    "precision_S": 0.826,
+    "recall_S": 0.983,
+    "precision_I": 0.0,
+    "recall_I": 0.0,
+    "precision_R": 0.702,
+    "recall_R": 0.802
+  }
+}
