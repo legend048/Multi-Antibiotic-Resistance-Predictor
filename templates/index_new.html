@@ -717,12 +717,12 @@
         <div class="stat-badge-label">Antibiotics</div>
       </div>
       <div class="stat-badge">
-        <div class="stat-badge-value">{{ ((metrics.CIPRO.accuracy + metrics.CEFTRIAXONE.accuracy + metrics.AMOXICILLIN.accuracy) / 3 * 100) | round(1) }}%</div>
-        <div class="stat-badge-label">Avg Accuracy</div>
+        <div class="stat-badge-value">{{ metrics.overall.accuracy|round(1) }}%</div>
+        <div class="stat-badge-label">Accuracy</div>
       </div>
       <div class="stat-badge">
-        <div class="stat-badge-value">{{ ((metrics.CIPRO.f1 + metrics.CEFTRIAXONE.f1 + metrics.AMOXICILLIN.f1) / 3) | round(3) }}</div>
-        <div class="stat-badge-label">Avg F1 Score</div>
+        <div class="stat-badge-value">{{ metrics.overall.f1_score|round(3) }}</div>
+        <div class="stat-badge-label">F1 Score</div>
       </div>
     </div>
   </div>
@@ -738,67 +738,83 @@
     <div class="card-header">
       <div>
         <h2 class="card-title">
-          <i class="fas fa-microscope"></i>
-          Bacterial Sample Analysis
+          <i class="fas fa-flask"></i>
+          Bacterial Genome Features
         </h2>
-        <p class="card-description">Input genomic feature data or use sample data for demonstration</p>
+        <p class="card-description">Select the genetic features identified in the bacterial sample</p>
       </div>
     </div>
     <div class="card-body">
-      
-      <!-- Quick Input Method -->
-      <div style="background: #f0f9ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-          <i class="fas fa-info-circle" style="color: #3b82f6; font-size: 1.5rem;"></i>
-          <div>
-            <h3 style="font-size: 1.125rem; font-weight: 600; color: #1e40af; margin-bottom: 0.25rem;">Quick Analysis Method</h3>
-            <p style="font-size: 0.875rem; color: #475569; margin: 0;">Use sample data for instant demonstration or manually enter genomic feature values below</p>
-          </div>
-        </div>
-        <button type="button" class="btn btn-primary" id="load-sample" style="width: 100%;">
-          <i class="fas fa-flask"></i>
-          Load Sample Bacterial Data & Analyze
-        </button>
-      </div>
-
       <form id="prediction-form">
         
-        <!-- Genomic Features Input -->
+        <!-- Binary Features -->
         <div class="input-section">
           <div class="input-section-header">
-            <span class="input-section-title">
-              <i class="fas fa-dna" style="margin-right: 0.5rem;"></i>
-              Genomic Features (F1 - F40)
-            </span>
-            <span class="input-section-badge">{{ feature_cols|length }} Features</span>
+            <span class="input-section-title">Resistance Genes</span>
+            <span class="input-section-badge">Binary Features</span>
           </div>
-          
-          <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
-            <p style="font-size: 0.875rem; color: #92400e; margin: 0;">
-              <i class="fas fa-lightbulb" style="margin-right: 0.5rem;"></i>
-              <strong>Tip:</strong> Enter numeric values (0-1) for each genomic feature identified in the bacterial sample. Most values are typically 0 for absent features. Use the "Load Sample Data" button above for a quick demonstration.
-            </p>
-          </div>
-
-          <div class="feature-grid">
-            {% for feat in feature_cols %}
-            <div class="feature-item">
-              <label class="feature-label">{{ feat }}</label>
-              <input type="number" class="feature-input" name="{{ feat }}" min="0" max="1" value="0" step="0.01" placeholder="0.00">
+          <div class="feature-grid" id="binary-features">
+            {% for feat in feature_cols if 'gene_' in feat or 'mutation_' in feat %}
+            <div class="feature-item" data-feature="{{ feat }}">
+              <label class="feature-label">{{ feat.replace('gene_', '').replace('mutation_', '').upper() }}</label>
+              <input type="checkbox" class="feature-checkbox" name="{{ feat }}" value="1">
+              <div class="feature-toggle"></div>
             </div>
             {% endfor %}
           </div>
         </div>
 
+        <!-- Integer Features -->
+        {% set int_features = feature_cols | select('match', '.*_count$') | list %}
+        {% if int_features %}
+        <div class="input-section">
+          <div class="input-section-header">
+            <span class="input-section-title">Count Features</span>
+            <span class="input-section-badge">Integer Values</span>
+          </div>
+          <div class="feature-grid">
+            {% for feat in int_features %}
+            <div class="feature-item">
+              <label class="feature-label">{{ feat.replace('_count', '').upper() }}</label>
+              <input type="number" class="feature-input" name="{{ feat }}" min="0" max="100" value="0" step="1">
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Real Features -->
+        {% set real_features = feature_cols | reject('match', '.*_count$') | reject('match', '.*gene_.*') | reject('match', '.*mutation_.*') | list %}
+        {% if real_features %}
+        <div class="input-section">
+          <div class="input-section-header">
+            <span class="input-section-title">Molecular Properties</span>
+            <span class="input-section-badge">Numeric Values</span>
+          </div>
+          <div class="feature-grid">
+            {% for feat in real_features %}
+            <div class="feature-item">
+              <label class="feature-label">{{ feat.upper()[:12] }}</label>
+              <input type="number" class="feature-input" name="{{ feat }}" min="0" max="1" value="0" step="0.01">
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
         <!-- Action Buttons -->
         <div class="button-group">
           <button type="submit" class="btn btn-primary">
             <i class="fas fa-brain"></i>
-            Analyze & Predict Resistance
+            Predict Resistance
+          </button>
+          <button type="button" class="btn btn-accent" id="load-sample">
+            <i class="fas fa-vial"></i>
+            Load Sample Data
           </button>
           <button type="reset" class="btn btn-secondary">
             <i class="fas fa-redo"></i>
-            Clear All Values
+            Reset
           </button>
         </div>
       </form>
@@ -850,6 +866,15 @@
      JAVASCRIPT
      ═══════════════════════════════════════════════════════════ -->
 <script>
+  // Toggle binary features
+  document.querySelectorAll('.feature-item[data-feature]').forEach(item => {
+    item.addEventListener('click', function() {
+      this.classList.toggle('active');
+      const checkbox = this.querySelector('.feature-checkbox');
+      checkbox.checked = this.classList.contains('active');
+    });
+  });
+
   // Form submission
   document.getElementById('prediction-form').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -858,16 +883,21 @@
     document.getElementById('results-container').innerHTML = `
       <div class="loading">
         <div class="spinner"></div>
-        <p class="loading-text">Analyzing genomic features and predicting resistance...</p>
+        <p class="loading-text">Analyzing genetic features...</p>
       </div>
     `;
 
     // Collect features
+    const formData = new FormData(this);
     const features = {};
     
-    // Get all number inputs
-    this.querySelectorAll('input[type="number"]').forEach(input => {
-      features[input.name] = parseFloat(input.value) || 0;
+    // Get all inputs
+    this.querySelectorAll('input').forEach(input => {
+      if (input.type === 'checkbox') {
+        features[input.name] = input.checked ? 1 : 0;
+      } else if (input.type === 'number') {
+        features[input.name] = parseFloat(input.value) || 0;
+      }
     });
 
     try {
@@ -974,10 +1004,6 @@
 
   // Load sample data
   document.getElementById('load-sample').addEventListener('click', async function() {
-    const btn = this;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Sample...';
-    
     try {
       const response = await fetch('/random_sample');
       const data = await response.json();
@@ -988,46 +1014,30 @@
       for (const [feature, value] of Object.entries(data.features)) {
         const input = form.querySelector(`[name="${feature}"]`);
         if (input) {
-          input.value = value.toFixed(3);
+          if (input.type === 'checkbox') {
+            input.checked = value > 0;
+            input.closest('.feature-item').classList.toggle('active', value > 0);
+          } else {
+            input.value = value;
+          }
         }
       }
       
-      btn.innerHTML = '<i class="fas fa-check"></i> Sample Loaded!';
-      
-      // Auto-submit the form to show predictions
-      setTimeout(() => {
-        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-        setTimeout(() => {
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fas fa-flask"></i> Load Sample Bacterial Data & Analyze';
-        }, 1000);
-      }, 500);
-      
+      // Show notification
+      alert('Sample data loaded successfully! Click "Predict Resistance" to analyze.');
     } catch (error) {
       console.error('Error loading sample:', error);
-      btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error Loading Sample';
-      setTimeout(() => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-flask"></i> Load Sample Bacterial Data & Analyze';
-      }, 2000);
+      alert('Unable to load sample data.');
     }
   });
 
   // Reset form
   document.getElementById('prediction-form').addEventListener('reset', function() {
-    // Clear results
-    document.getElementById('results-container').innerHTML = `
-      <div class="results-empty">
-        <div class="results-empty-icon">
-          <i class="fas fa-clipboard-list"></i>
-        </div>
-        <h3 class="results-empty-title">No Predictions Yet</h3>
-        <p class="results-empty-text">
-          Enter bacterial genome features and click "Analyze & Predict Resistance" to generate antibiotic susceptibility predictions.
-        </p>
-      </div>
-    `;
-    document.getElementById('contributing-container').style.display = 'none';
+    setTimeout(() => {
+      document.querySelectorAll('.feature-item.active').forEach(item => {
+        item.classList.remove('active');
+      });
+    }, 0);
   });
 </script>
 
