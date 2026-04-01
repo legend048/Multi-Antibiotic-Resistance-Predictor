@@ -1,0 +1,63 @@
+Hospital Microbiology Report
+Sample ID: AMR-DEMO-001
+Specimen: Urine
+Organism: Escherichia coli
+Collection Date: 2026-03-27
+
+Clinical Summary:
+- Recurrent UTI symptoms, prior fluoroquinolone exposure
+- Preliminary AST trend suggests multi-drug resistance risk
+
+Genomic Findings (sequencing narrative):
+- gyrA S83L mutation: detected
+- gyrA D87G mutation: detected
+- bla_TEM: detected
+- bla_CTX-M-15: detected
+- bla_SHV: detected
+- MDR plasmid marker: present
+- Efflux pump burden: elevated
+
+Normalized genomic feature signals (0 to 1):
+F1: 1.00
+F2: 0.95
+F3: 0.98
+F4: 0.92
+F5: 0.40
+F6: 0.35
+F7: 0.88
+F8: 0.72
+F9: 0.66
+F10: 0.59
+F11: 1.00
+F12: 0.84
+F13: 0.79
+F14: 0.68
+F15: 0.61
+F16: 0.90
+F17: 0.86
+F18: 0.82
+F19: 0.77
+F20: 0.74
+F21: 0.69
+F22: 0.73
+F23: 0.88
+F24: 0.79
+F25: 0.81
+F26: 0.76
+F27: 0.83
+F28: 0.71
+F29: 0.67
+F30: 0.64
+F31: 0.93
+F32: 0.74
+F33: 0.89
+F34: 0.78
+F35: 0.72
+F36: 0.69
+F37: 0.81
+F38: 0.76
+F39: 0.70
+F40: 0.73
+
+Interpretation Note:
+Pattern is consistent with high AMR burden and likely resistant phenotype for multiple antibiotics.

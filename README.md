@@ -106,6 +106,21 @@ python app.py
 ```
 Open **http://localhost:5000** in your browser.
 
+### 5. Use AI-assisted genomic autofill (optional)
+
+Add this to `.env` in project root:
+
+```env
+ai_studio_key=YOUR_AI_STUDIO_KEY
+```
+
+1. Generate a Google AI Studio API key
+2. Add it to `.env` as `ai_studio_key`
+3. Upload medical/genomics notes (`.txt`, `.csv`, `.json`, `.md`, or `.pdf`)
+4. Click **Extract & Fill Genomic Features**, then run prediction
+
+The key in `.env` stays server-side and is not entered in the web UI.
+
 ---
 
 ## 🗂️ Project Structure
@@ -142,6 +157,7 @@ AMR-Multi-Antibiotic-Resistance-Predictor/
 |---|---|---|
 | `GET` | `/` | Interactive web dashboard |
 | `POST` | `/predict` | Run resistance prediction |
+| `POST` | `/extract_features` | Use AI Studio + uploaded medical data to infer F1-F40 |
 | `GET` | `/metrics` | Model performance stats |
 | `GET` | `/random_sample` | Load a sample genome for demo |
 
@@ -171,6 +187,31 @@ POST /predict
     "CEFTRIAXONE": { "label": "S", "confidence": 72.1 },
     "AMOXICILLIN": { "label": "R", "confidence": 81.5 }
   }
+}
+```
+
+### Example `/extract_features` request:
+
+`multipart/form-data`
+
+- `api_key`: AI Studio API key
+- `model`: Gemini model name (example: `gemini-2.0-flash`)
+- `medical_file`: uploaded medical/genomics file
+
+If a requested model is unavailable for your API key, the backend automatically selects a valid `generateContent` model.
+
+### Example `/extract_features` response:
+```json
+{
+  "features": {
+    "F1": 1,
+    "F2": 0,
+    "F3": 0.4,
+    "F4": 0,
+    "F5": 0
+  },
+  "model": "models/gemini-2.0-flash",
+  "non_zero_features": 9
 }
 ```
 

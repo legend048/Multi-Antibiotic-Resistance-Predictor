@@ -292,6 +292,103 @@
     font-weight: 500;
   }
 
+  .ai-assist-panel {
+    background: #ecfeff;
+    border: 2px solid #06b6d4;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .ai-assist-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .ai-assist-header i {
+    color: #0e7490;
+    font-size: 1.2rem;
+  }
+
+  .ai-assist-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #155e75;
+  }
+
+  .ai-assist-subtitle {
+    font-size: 0.82rem;
+    color: #0f766e;
+  }
+
+  .ai-assist-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .ai-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .ai-field.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .ai-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #155e75;
+  }
+
+  .ai-input,
+  .ai-select,
+  .ai-file {
+    width: 100%;
+    border: 1px solid #67e8f9;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 0.65rem 0.75rem;
+    color: var(--text-primary);
+    font-size: 0.86rem;
+  }
+
+  .ai-status {
+    margin-top: 0.8rem;
+    font-size: 0.82rem;
+    border-radius: 8px;
+    padding: 0.6rem 0.7rem;
+    display: none;
+    border: 1px solid transparent;
+  }
+
+  .ai-status.info {
+    display: block;
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    color: #075985;
+  }
+
+  .ai-status.success {
+    display: block;
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+  }
+
+  .ai-status.error {
+    display: block;
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #991b1b;
+  }
+
   /* ═══════════════════════════════════════════════════════════
      BUTTONS
      ═══════════════════════════════════════════════════════════ */
@@ -692,6 +789,10 @@
     .feature-grid {
       grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
+
+    .ai-assist-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 </head>
@@ -762,6 +863,51 @@
       </div>
 
       <form id="prediction-form">
+
+        <!-- AI Autofill Method -->
+        <div class="input-section">
+          <div class="ai-assist-panel">
+            <div class="ai-assist-header">
+              <i class="fas fa-wand-magic-sparkles"></i>
+              <div>
+                <div class="ai-assist-title">AI-Assisted Genomic Feature Extraction</div>
+                <div class="ai-assist-subtitle">Upload medical/genomics notes and auto-fill F1-F40.</div>
+              </div>
+            </div>
+
+            <div class="ai-assist-grid">
+              <div class="ai-field">
+                <label for="ai-model" class="ai-label">LLM Model</label>
+                <select id="ai-model" class="ai-select">
+                  <option value="gemini-2.0-flash" selected>gemini-2.0-flash</option>
+                  <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                  <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
+                  <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                  <option value="gemma-3-1b-it">gemma-3-1b-it</option>
+                  <option value="gemma-3-4b-it">gemma-3-4b-it</option>
+                  <option value="gemma-3-12b-it">gemma-3-12b-it</option>
+                  <option value="gemma-3-27b-it">gemma-3-27b-it</option>
+                  <option value="gemma-3n-e2b-it">gemma-3n-e2b-it</option>
+                  <option value="gemma-3n-e4b-it">gemma-3n-e4b-it</option>
+                </select>
+              </div>
+
+              <div class="ai-field">
+                <label for="medical-file" class="ai-label">Medical Data File (TXT, CSV, JSON, MD, PDF)</label>
+                <input id="medical-file" class="ai-file" type="file" accept=".txt,.csv,.json,.md,.pdf">
+              </div>
+            </div>
+
+            <div class="button-group" style="margin-top: 0.9rem;">
+              <button type="button" class="btn btn-accent" id="extract-llm">
+                <i class="fas fa-file-waveform"></i>
+                Extract & Fill Genomic Features
+              </button>
+            </div>
+
+            <div id="ai-status" class="ai-status"></div>
+          </div>
+        </div>
         
         <!-- Genomic Features Input -->
         <div class="input-section">
@@ -850,12 +996,102 @@
      JAVASCRIPT
      ═══════════════════════════════════════════════════════════ -->
 <script>
+  const predictionForm = document.getElementById('prediction-form');
+  const resultsContainer = document.getElementById('results-container');
+  const contributingContainer = document.getElementById('contributing-container');
+  const aiStatus = document.getElementById('ai-status');
+
+  function setAiStatus(message, type = 'info') {
+    aiStatus.className = `ai-status ${type}`;
+    aiStatus.textContent = message;
+  }
+
+  function updateFeatureCardState(inputEl) {
+    const card = inputEl.closest('.feature-item');
+    if (!card) return;
+
+    const value = parseFloat(inputEl.value);
+    if (!Number.isNaN(value) && value > 0) {
+      card.classList.add('active');
+    } else {
+      card.classList.remove('active');
+    }
+  }
+
+  function refreshFeatureCardStates() {
+    predictionForm.querySelectorAll('input[type="number"]').forEach(input => {
+      updateFeatureCardState(input);
+    });
+  }
+
+  function applyExtractedFeatures(features) {
+    for (const [feature, rawValue] of Object.entries(features)) {
+      const input = predictionForm.querySelector(`[name="${feature}"]`);
+      if (!input) continue;
+
+      const numericValue = Number(rawValue);
+      const safeValue = Number.isFinite(numericValue) ? Math.max(0, Math.min(1, numericValue)) : 0;
+      input.value = safeValue.toFixed(3);
+      updateFeatureCardState(input);
+    }
+  }
+
+  predictionForm.querySelectorAll('input[type="number"]').forEach(input => {
+    input.addEventListener('input', () => updateFeatureCardState(input));
+  });
+
+  refreshFeatureCardStates();
+
+  document.getElementById('extract-llm').addEventListener('click', async function() {
+    const trigger = this;
+    const model = document.getElementById('ai-model').value;
+    const upload = document.getElementById('medical-file').files[0];
+
+    if (!upload) {
+      setAiStatus('Please upload a medical data file first.', 'error');
+      return;
+    }
+
+    const payload = new FormData();
+    payload.append('model', model);
+    payload.append('medical_file', upload);
+
+    trigger.disabled = true;
+    trigger.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting Features...';
+    setAiStatus('Calling AI Studio to infer genomic features from uploaded medical data...', 'info');
+
+    try {
+      const response = await fetch('/extract_features', {
+        method: 'POST',
+        body: payload
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'AI extraction failed.');
+      }
+
+      applyExtractedFeatures(data.features || {});
+      setAiStatus(
+        `Extraction complete with ${data.model}. Non-zero features detected: ${data.non_zero_features}.`,
+        'success'
+      );
+    } catch (error) {
+      console.error('AI extraction error:', error);
+      setAiStatus(error.message || 'Unable to extract features from uploaded data.', 'error');
+    } finally {
+      trigger.disabled = false;
+      trigger.innerHTML = '<i class="fas fa-file-waveform"></i> Extract & Fill Genomic Features';
+    }
+  });
+
   // Form submission
-  document.getElementById('prediction-form').addEventListener('submit', async function(e) {
+  predictionForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     
     // Show loading state
-    document.getElementById('results-container').innerHTML = `
+    resultsContainer.innerHTML = `
       <div class="loading">
         <div class="spinner"></div>
         <p class="loading-text">Analyzing genomic features and predicting resistance...</p>
@@ -878,14 +1114,18 @@
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Prediction request failed.');
+      }
+
       displayResults(data);
     } catch (error) {
       console.error('Prediction error:', error);
-      document.getElementById('results-container').innerHTML = `
+      resultsContainer.innerHTML = `
         <div class="results-empty">
           <div class="results-empty-icon">⚠️</div>
           <h3 class="results-empty-title">Prediction Error</h3>
-          <p class="results-empty-text">Unable to generate predictions. Please try again.</p>
+          <p class="results-empty-text">${error.message || 'Unable to generate predictions. Please try again.'}</p>
         </div>
       `;
     }
@@ -954,7 +1194,7 @@
     }
     
     html += '</div>';
-    document.getElementById('results-container').innerHTML = html;
+    resultsContainer.innerHTML = html;
 
     // Display contributing features
     if (contributing && contributing.length > 0) {
@@ -968,7 +1208,7 @@
         `;
       });
       document.getElementById('contributing-list').innerHTML = contribHtml;
-      document.getElementById('contributing-container').style.display = 'block';
+      contributingContainer.style.display = 'block';
     }
   }
 
@@ -983,12 +1223,13 @@
       const data = await response.json();
       
       // Populate form with sample data
-      const form = document.getElementById('prediction-form');
+      const form = predictionForm;
       
       for (const [feature, value] of Object.entries(data.features)) {
         const input = form.querySelector(`[name="${feature}"]`);
         if (input) {
           input.value = value.toFixed(3);
+          updateFeatureCardState(input);
         }
       }
       
@@ -1014,9 +1255,15 @@
   });
 
   // Reset form
-  document.getElementById('prediction-form').addEventListener('reset', function() {
+  predictionForm.addEventListener('reset', function() {
+    setTimeout(() => {
+      refreshFeatureCardStates();
+      aiStatus.className = 'ai-status';
+      aiStatus.textContent = '';
+    }, 0);
+
     // Clear results
-    document.getElementById('results-container').innerHTML = `
+    resultsContainer.innerHTML = `
       <div class="results-empty">
         <div class="results-empty-icon">
           <i class="fas fa-clipboard-list"></i>
@@ -1027,7 +1274,7 @@
         </p>
       </div>
     `;
-    document.getElementById('contributing-container').style.display = 'none';
+    contributingContainer.style.display = 'none';
   });
 </script>
 
