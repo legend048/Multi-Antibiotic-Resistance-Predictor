@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Model Details | AMR CDS</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --line: #e2e8f0;
+    --text: #0f172a;
+    --muted: #475569;
+    --primary: #2563eb;
+    --primary-soft: #dbeafe;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --main: 'Inter', sans-serif;
+    --mono: 'Roboto Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--main);
+    color: var(--text);
+    background: radial-gradient(circle at 12% 10%, #e0f2fe 0%, #f8fafc 42%), var(--bg);
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem 3rem;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    font-weight: 700;
+    color: #1e3a8a;
+  }
+
+  .brand i {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .back {
+    text-decoration: none;
+    color: #1e3a8a;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    padding: 0.55rem 0.8rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .hero {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 1.4rem;
+  }
+
+  .hero h1 {
+    font-size: 1.6rem;
+    margin-bottom: 0.45rem;
+  }
+
+  .hero p {
+    color: var(--muted);
+    line-height: 1.65;
+  }
+
+  .stats {
+    margin-top: 1rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.35rem;
+  }
+
+  .stat-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--primary);
+    font-family: var(--mono);
+  }
+
+  .grid {
+    margin-top: 1rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1rem;
+  }
+
+  .card h2 {
+    font-size: 1.05rem;
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .card p,
+  .card li {
+    color: var(--muted);
+    line-height: 1.65;
+    font-size: 0.92rem;
+  }
+
+  .card ul,
+  .card ol {
+    padding-left: 1rem;
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .train-grid {
+    margin-top: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .train-item {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 0.6rem;
+    background: #f8fafc;
+  }
+
+  .train-name {
+    font-size: 0.73rem;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    margin-bottom: 0.2rem;
+  }
+
+  .train-value {
+    font-size: 0.85rem;
+    color: var(--text);
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+
+  .wide {
+    margin-top: 1rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1rem;
+  }
+
+  .wide h2 {
+    margin-bottom: 0.7rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    overflow: hidden;
+    border-radius: 10px;
+  }
+
+  th, td {
+    border: 1px solid var(--line);
+    padding: 0.7rem;
+    text-align: left;
+    font-size: 0.9rem;
+  }
+
+  th {
+    background: var(--primary-soft);
+    color: #1e3a8a;
+    font-weight: 700;
+  }
+
+  .metric {
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+
+  .f1-box {
+    margin-top: 1rem;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    border-radius: 10px;
+    padding: 0.8rem;
+  }
+
+  .f1-box h3 {
+    margin-bottom: 0.4rem;
+    color: #1e3a8a;
+  }
+
+  .formula {
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    color: #1e3a8a;
+    margin-top: 0.2rem;
+    margin-bottom: 0.4rem;
+  }
+
+  @media (max-width: 900px) {
+    .stats,
+    .grid,
+    .train-grid {
+      grid-template-columns: 1fr;
+    }
+
+    table,
+    thead,
+    tbody,
+    th,
+    td,
+    tr {
+      display: block;
+    }
+
+    th {
+      display: none;
+    }
+
+    td {
+      border-bottom: none;
+      padding: 0.45rem 0.55rem;
+    }
+
+    tr {
+      border: 1px solid var(--line);
+      margin-bottom: 0.55rem;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <i class="fas fa-brain"></i>
+        <span>AMR AI Model Guide</span>
+      </div>
+      <a class="back" href="/"><i class="fas fa-arrow-left"></i> Back to Predictor</a>
+    </div>
+
+    <section class="hero">
+      <h1>How Our AI Model Works</h1>
+      <p>
+        This system predicts antibiotic resistance for <strong>E. coli</strong> using 40 genomic features and a multi-output machine learning model.
+        It helps clinicians and researchers estimate whether the organism is Susceptible (S), Intermediate (I), or Resistant (R) to each supported antibiotic.
+      </p>
+    </section>
+
+    <section class="stats">
+      <div class="stat">
+        <div class="stat-label">Supported Antibiotics</div>
+        <div class="stat-value">{{ antibiotics|length }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Average F1 Score</div>
+        <div class="stat-value">{{ avg_f1 }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Average Accuracy</div>
+        <div class="stat-value">{{ avg_accuracy }}%</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2><i class="fas fa-bullseye" style="color: var(--primary);"></i> What It Does</h2>
+        <ul>
+          <li>Predicts resistance class (S, I, R) for three antibiotics in one request.</li>
+          <li>Returns confidence and class probabilities for each antibiotic.</li>
+          <li>Supports manual genomic input and AI-assisted extraction from medical reports.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2><i class="fas fa-cogs" style="color: var(--success);"></i> How It Does It</h2>
+        <ol>
+          <li>Collects 40 genomic features (F1-F40) from direct input or report extraction.</li>
+          <li>Builds a feature vector in fixed model order.</li>
+          <li>Runs a MultiOutputClassifier with one RandomForest head per antibiotic.</li>
+          <li>Maps class indexes to clinical labels: S, I, and R.</li>
+        </ol>
+      </article>
+
+      <article class="card" style="grid-column: 1 / -1;">
+        <h2><i class="fas fa-graduation-cap" style="color: var(--warning);"></i> How We Trained It</h2>
+        <p>
+          The model was trained on a cleaned antimicrobial resistance dataset with paired genomic features and AST outcomes.
+          We used a multi-task setup so one training pipeline learns all three antibiotic targets together.
+        </p>
+        <div class="train-grid">
+          <div class="train-item">
+            <div class="train-name">Algorithm</div>
+            <div class="train-value">{{ training_summary.algorithm }}</div>
+          </div>
+          <div class="train-item">
+            <div class="train-name">Estimators</div>
+            <div class="train-value">{{ training_summary.estimators }}</div>
+          </div>
+          <div class="train-item">
+            <div class="train-name">Max Depth</div>
+            <div class="train-value">{{ training_summary.max_depth }}</div>
+          </div>
+          <div class="train-item">
+            <div class="train-name">Dataset Size</div>
+            <div class="train-value">{{ training_summary.dataset_size }}</div>
+          </div>
+          <div class="train-item">
+            <div class="train-name">Feature Count</div>
+            <div class="train-value">{{ training_summary.feature_count }}</div>
+          </div>
+          <div class="train-item">
+            <div class="train-name">Data Split</div>
+            <div class="train-value">{{ training_summary.data_split }}</div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="wide">
+      <h2><i class="fas fa-capsules" style="color: var(--danger);"></i> Supported Antibiotics</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Antibiotic</th>
+            <th>Drug Family</th>
+            <th>Use Case</th>
+            <th>F1 Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ab in antibiotics %}
+          <tr>
+            <td>{{ antibiotic_info[ab].full }}</td>
+            <td>{{ antibiotic_info[ab].family }}</td>
+            <td>{{ antibiotic_info[ab].treats }}</td>
+            <td class="metric">{{ metrics[ab].f1 | round(3) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="f1-box">
+        <h3>What Is F1 Score?</h3>
+        <p>
+          F1 score balances <strong>precision</strong> and <strong>recall</strong> into one metric, especially useful when class balance is imperfect.
+          It ranges from 0 to 1, where higher values indicate better combined precision and recall.
+        </p>
+        <div class="formula">F1 = 2 * (Precision * Recall) / (Precision + Recall)</div>
+        <p>
+          In this project, the displayed average is the mean of per-antibiotic weighted F1 scores for Ciprofloxacin, Ceftriaxone, and Amoxicillin.
+        </p>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

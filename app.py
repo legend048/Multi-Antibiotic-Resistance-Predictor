@@ -384,6 +384,32 @@ def index():
 def genomic_features_page():
     return render_template("genomic_features.html", feature_cols=FEATURE_COLS)
 
+
+@app.route("/model_info")
+def model_info_page():
+    avg_f1 = round(sum(METRICS[ab]["f1"] for ab in ANTIBIOTICS) / len(ANTIBIOTICS), 3)
+    avg_accuracy = round(sum(METRICS[ab]["accuracy"] for ab in ANTIBIOTICS) / len(ANTIBIOTICS) * 100, 1)
+
+    training_summary = {
+        "algorithm": "MultiOutputClassifier(RandomForestClassifier)",
+        "estimators": 200,
+        "max_depth": 12,
+        "dataset_size": 3000,
+        "feature_count": len(FEATURE_COLS),
+        "data_split": "80/20 train-test split",
+        "source": "PATRIC / BV-BRC"
+    }
+
+    return render_template(
+        "model_info.html",
+        antibiotics=ANTIBIOTICS,
+        antibiotic_info=ANTIBIOTIC_INFO,
+        metrics=METRICS,
+        avg_f1=avg_f1,
+        avg_accuracy=avg_accuracy,
+        training_summary=training_summary
+    )
+
 @app.route("/predict", methods=["POST"])
 def predict():
     data = request.get_json()

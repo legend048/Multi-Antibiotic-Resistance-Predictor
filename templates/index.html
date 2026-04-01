@@ -338,6 +338,12 @@
     text-decoration: underline;
   }
 
+  .ai-assist-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+  }
+
   .ai-assist-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -861,22 +867,6 @@
       </div>
     </div>
     <div class="card-body">
-      
-      <!-- Quick Input Method -->
-      <div style="background: #f0f9ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-          <i class="fas fa-info-circle" style="color: #3b82f6; font-size: 1.5rem;"></i>
-          <div>
-            <h3 style="font-size: 1.125rem; font-weight: 600; color: #1e40af; margin-bottom: 0.25rem;">Quick Analysis Method</h3>
-            <p style="font-size: 0.875rem; color: #475569; margin: 0;">Use sample data for instant demonstration or manually enter genomic feature values below</p>
-          </div>
-        </div>
-        <button type="button" class="btn btn-primary" id="load-sample" style="width: 100%;">
-          <i class="fas fa-flask"></i>
-          Load Sample Bacterial Data & Analyze
-        </button>
-      </div>
-
       <form id="prediction-form">
 
         <!-- AI Autofill Method -->
@@ -887,10 +877,16 @@
               <div>
                 <div class="ai-assist-title">AI-Assisted Genomic Feature Extraction</div>
                 <div class="ai-assist-subtitle">Upload medical/genomics notes and auto-fill F1-F40.</div>
-                <a class="ai-assist-link" href="/genomic_features">
-                  <i class="fas fa-book-medical"></i>
-                  What are Genomic Features?
-                </a>
+                <div class="ai-assist-links">
+                  <a class="ai-assist-link" href="/genomic_features">
+                    <i class="fas fa-book-medical"></i>
+                    What are Genomic Features?
+                  </a>
+                  <a class="ai-assist-link" href="/model_info">
+                    <i class="fas fa-brain"></i>
+                    How Our AI Model Works
+                  </a>
+                </div>
               </div>
             </div>
 
@@ -967,6 +963,21 @@
           </button>
         </div>
       </form>
+
+      <!-- Quick Input Method -->
+      <div style="background: #f0f9ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 1.5rem; margin-top: 2rem;">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+          <i class="fas fa-info-circle" style="color: #3b82f6; font-size: 1.5rem;"></i>
+          <div>
+            <h3 style="font-size: 1.125rem; font-weight: 600; color: #1e40af; margin-bottom: 0.25rem;">Quick Analysis Method</h3>
+            <p style="font-size: 0.875rem; color: #475569; margin: 0;">Use sample data for instant demonstration or manually enter genomic feature values below</p>
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary" id="load-sample" style="width: 100%;">
+          <i class="fas fa-flask"></i>
+          Load Sample Bacterial Data & Analyze
+        </button>
+      </div>
     </div>
   </div>
 
