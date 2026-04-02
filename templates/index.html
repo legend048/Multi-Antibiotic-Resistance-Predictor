@@ -508,6 +508,31 @@
     gap: 1rem;
   }
 
+  .result-section {
+    margin-bottom: 1rem;
+  }
+
+  .result-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .result-section-title {
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .results-compact-grid {
+    column-count: 2;
+    column-gap: 0.75rem;
+  }
+
   .result-card {
     border: 2px solid var(--border-color);
     border-radius: 12px;
@@ -529,6 +554,21 @@
 
   .result-card:nth-child(2) { animation-delay: 0.1s; opacity: 0; }
   .result-card:nth-child(3) { animation-delay: 0.2s; opacity: 0; }
+
+  .result-card.compact {
+    border-width: 1px;
+    animation: none;
+    display: inline-block;
+    width: 100%;
+    margin: 0 0 0.75rem;
+    break-inside: avoid;
+    vertical-align: top;
+  }
+
+  .result-card.compact:nth-child(2),
+  .result-card.compact:nth-child(3) {
+    opacity: 1;
+  }
 
   .result-card-header {
     padding: 1rem 1.25rem;
@@ -585,6 +625,81 @@
 
   .result-card-body {
     padding: 1.25rem;
+  }
+
+  .result-card.compact .result-card-header {
+    padding: 0.75rem 0.9rem;
+    border-bottom: 1px solid var(--border-color);
+    gap: 0.55rem;
+  }
+
+  .result-card.compact .result-antibiotic {
+    min-width: 0;
+    padding-right: 0.25rem;
+  }
+
+  .result-card.compact .result-card-body {
+    padding: 0.75rem 0.9rem;
+  }
+
+  .result-card.compact .result-antibiotic-name {
+    font-size: 0.92rem;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .result-card.compact .result-antibiotic-info {
+    font-size: 0.68rem;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .result-card.compact .result-badge {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+  }
+
+  .compact-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .compact-confidence {
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .compact-probabilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .compact-pill {
+    font-size: 0.68rem;
+    font-family: var(--font-mono);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    padding: 0.2rem 0.5rem;
+  }
+
+  .compact-note {
+    margin-top: 0.45rem;
+    font-size: 0.66rem;
+    color: var(--text-tertiary);
+    line-height: 1.4;
   }
 
   .confidence-section {
@@ -813,6 +928,10 @@
 
     .ai-assist-grid {
       grid-template-columns: 1fr;
+    }
+
+    .results-compact-grid {
+      column-count: 1;
     }
   }
 </style>
@@ -1175,14 +1294,13 @@
 
   function displayResults(data) {
     const { predictions, contributing } = data;
-    
-    // Display predictions
-    let html = '<div class="results-list">';
-    
-    for (const [antibiotic, result] of Object.entries(predictions)) {
+    const entries = Object.entries(predictions || {});
+    const coreEntries = entries.filter(([, result]) => !result.derived);
+    const extendedEntries = entries.filter(([, result]) => result.derived);
+
+    function renderDetailedCard(result) {
       const confidenceClass = result.confidence > 75 ? 'high' : result.confidence > 50 ? 'medium' : 'low';
-      
-      html += `
+      return `
         <div class="result-card">
           <div class="result-card-header">
             <div class="result-antibiotic">
@@ -1201,7 +1319,6 @@
                 <div class="confidence-bar ${confidenceClass}" style="width: ${result.confidence}%"></div>
               </div>
             </div>
-            
             <div class="probability-grid">
               <div class="probability-item">
                 <div class="probability-label">Susceptible</div>
@@ -1225,18 +1342,65 @@
                 <div class="probability-value">${(result.probabilities.R * 100).toFixed(1)}%</div>
               </div>
             </div>
-            
             <div class="antibiotic-details">
               <span class="detail-tag"><i class="fas fa-capsules"></i>${result.info.family}</span>
               <span class="detail-tag"><i class="fas fa-heartbeat"></i>${result.info.treats}</span>
-              ${result.derived ? `<span class="detail-tag"><i class="fas fa-database"></i>Online Phenotype Extension${result.support ? ` (${result.support})` : ''}</span>` : ''}
             </div>
           </div>
         </div>
       `;
     }
-    
-    html += '</div>';
+
+    function renderCompactCard(result) {
+      return `
+        <div class="result-card compact">
+          <div class="result-card-header">
+            <div class="result-antibiotic">
+              <div class="result-antibiotic-name">${result.info.full}</div>
+              <div class="result-antibiotic-info">${result.info.family}</div>
+            </div>
+            <div class="result-badge badge-${result.label}">${result.label}</div>
+          </div>
+          <div class="result-card-body">
+            <div class="compact-meta">
+              <span class="compact-confidence">Confidence ${result.confidence}%</span>
+              <span class="compact-confidence">${result.full}</span>
+            </div>
+            <div class="compact-probabilities">
+              <span class="compact-pill">S ${(result.probabilities.S * 100).toFixed(0)}%</span>
+              <span class="compact-pill">I ${(result.probabilities.I * 100).toFixed(0)}%</span>
+              <span class="compact-pill">R ${(result.probabilities.R * 100).toFixed(0)}%</span>
+            </div>
+            <div class="compact-note">Online phenotype extension${result.support ? ` • support ${result.support}` : ''}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    let html = '';
+
+    if (coreEntries.length > 0) {
+      html += '<div class="result-section">';
+      html += '<div class="result-section-title"><i class="fas fa-dna"></i> Core Trained Antibiotics</div>';
+      html += '<div class="results-list">';
+      for (const [, result] of coreEntries) {
+        html += renderDetailedCard(result);
+      }
+      html += '</div>';
+      html += '</div>';
+    }
+
+    if (extendedEntries.length > 0) {
+      html += '<div class="result-section">';
+      html += '<div class="result-section-title"><i class="fas fa-database"></i> Extended Antibiotics</div>';
+      html += '<div class="results-compact-grid">';
+      for (const [, result] of extendedEntries) {
+        html += renderCompactCard(result);
+      }
+      html += '</div>';
+      html += '</div>';
+    }
+
     resultsContainer.innerHTML = html;
 
     // Display contributing features
@@ -1252,6 +1416,8 @@
       });
       document.getElementById('contributing-list').innerHTML = contribHtml;
       contributingContainer.style.display = 'block';
+    } else {
+      contributingContainer.style.display = 'none';
     }
   }
 
