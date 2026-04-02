@@ -303,8 +303,11 @@
   .ai-assist-header {
     display: flex;
     align-items: center;
+    justify-content: center;
+    flex-direction: column;
     gap: 0.75rem;
     margin-bottom: 0.85rem;
+    text-align: center;
   }
 
   .ai-assist-header i {
@@ -342,6 +345,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.85rem;
+    justify-content: center;
   }
 
   .ai-assist-grid {
@@ -992,9 +996,9 @@
         <div class="input-section">
           <div class="ai-assist-panel">
             <div class="ai-assist-header">
-              <i class="fas fa-wand-magic-sparkles"></i>
+              <!-- <i class="fas fa-wand-magic-sparkles"></i> -->
               <div>
-                <div class="ai-assist-title">AI-Assisted Genomic Feature Extraction</div>
+                <div class="ai-assist-title"><i class="fas fa-wand-magic-sparkles"></i> AI-Assisted Genomic Feature Extraction</div>
                 <div class="ai-assist-subtitle">Upload medical/genomics notes and auto-fill F1-F40.</div>
                 <div class="ai-assist-links">
                   <a class="ai-assist-link" href="/genomic_features">
@@ -1010,23 +1014,7 @@
             </div>
 
             <div class="ai-assist-grid">
-              <div class="ai-field">
-                <label for="ai-model" class="ai-label">LLM Model</label>
-                <select id="ai-model" class="ai-select">
-                  <option value="gemini-2.0-flash" selected>gemini-2.0-flash</option>
-                  <option value="gemini-2.5-flash">gemini-2.5-flash</option>
-                  <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
-                  <option value="gemini-2.5-pro">gemini-2.5-pro</option>
-                  <option value="gemma-3-1b-it">gemma-3-1b-it</option>
-                  <option value="gemma-3-4b-it">gemma-3-4b-it</option>
-                  <option value="gemma-3-12b-it">gemma-3-12b-it</option>
-                  <option value="gemma-3-27b-it">gemma-3-27b-it</option>
-                  <option value="gemma-3n-e2b-it">gemma-3n-e2b-it</option>
-                  <option value="gemma-3n-e4b-it">gemma-3n-e4b-it</option>
-                </select>
-              </div>
-
-              <div class="ai-field">
+              <div class="ai-field full-width">
                 <label for="medical-file" class="ai-label">Medical Data File (TXT, CSV, JSON, MD, PDF)</label>
                 <input id="medical-file" class="ai-file" type="file" accept=".txt,.csv,.json,.md,.pdf">
               </div>
@@ -1193,7 +1181,7 @@
 
   document.getElementById('extract-llm').addEventListener('click', async function() {
     const trigger = this;
-    const model = document.getElementById('ai-model').value;
+    const model = 'gemma-3-12b-it';
     const upload = document.getElementById('medical-file').files[0];
 
     if (!upload) {
